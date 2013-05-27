@@ -1,0 +1,28 @@
+package away3dGold.textures
+{
+	import away3dGold.arcane;
+
+	import flash.display3D.Context3D;
+	import flash.display3D.Context3DTextureFormat;
+	import flash.display3D.textures.TextureBase;
+
+	use namespace arcane;
+
+	public class CubeTextureBase extends TextureProxyBase
+	{
+		public function CubeTextureBase()
+		{
+			super();
+		}
+
+		public function get size() : int
+		{
+			return _width;
+		}
+
+		override protected function createTexture(context : Context3D) : TextureBase
+		{
+			return context.createCubeTexture(width, Context3DTextureFormat.BGRA, false);
+		}
+	}
+}
