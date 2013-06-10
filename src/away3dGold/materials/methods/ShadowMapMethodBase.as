@@ -13,7 +13,7 @@ package away3dGold.materials.methods {
 		protected var _castingLight : LightBase;
 		protected var _shadowMapper : ShadowMapperBase;
 
-		protected var _epsilon : Number = .002;
+		protected var _epsilon : Number = .02;
 		protected var _alpha : Number = 1;
 
 

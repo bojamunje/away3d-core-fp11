@@ -1,17 +1,15 @@
 package away3dGold.materials.methods
 {
-	import away3dGold.arcane;
-	import away3dGold.cameras.Camera3D;
-	import away3dGold.core.base.IRenderable;
-	import away3dGold.core.managers.Stage3DProxy;
-	import away3dGold.errors.AbstractMethodError;
-	import away3dGold.lights.LightBase;
-	import away3dGold.lights.PointLight;
-	import away3dGold.lights.shadowmaps.DirectionalShadowMapper;
-	import away3dGold.materials.compilation.ShaderRegisterCache;
-	import away3dGold.materials.compilation.ShaderRegisterElement;
-
-	import flash.geom.Vector3D;
+	import away3dGold.*;
+	import away3dGold.cameras.*;
+	import away3dGold.core.base.*;
+	import away3dGold.core.managers.*;
+	import away3dGold.errors.*;
+	import away3dGold.lights.*;
+	import away3dGold.lights.shadowmaps.*;
+	import away3dGold.materials.compilation.*;
+	
+	import flash.geom.*;
 
 	use namespace arcane;
 
@@ -23,7 +21,6 @@ package away3dGold.materials.methods
 		public function SimpleShadowMapMethodBase(castingLight : LightBase)
 		{
 			_usePoint = castingLight is PointLight;
-			_epsilon = _usePoint? .01 : .002;
 			super(castingLight);
 		}
 
@@ -159,10 +156,10 @@ package away3dGold.materials.methods
 			var index : int = vo.fragmentConstantsIndex;
 
 			if (_usePoint)
-				fragmentData[index+4] = -_epsilon;
+				fragmentData[index+4] = -Math.pow(1/((_castingLight as PointLight).fallOff*_epsilon), 2);
 			else
-				vo.vertexData[vo.vertexConstantsIndex + 3] = -_epsilon;
-
+				vo.vertexData[vo.vertexConstantsIndex + 3] = -1/(DirectionalShadowMapper(_shadowMapper).depth*_epsilon);
+			
 			fragmentData[index+5] = 1-_alpha;
 			if (_usePoint) {
 				var pos : Vector3D = _castingLight.scenePosition;

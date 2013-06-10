@@ -3,12 +3,14 @@ package away3dGold.library
 	import away3dGold.arcane;
 	import away3dGold.events.AssetEvent;
 	import away3dGold.events.LoaderEvent;
+    import away3dGold.events.ParserEvent;
 	import away3dGold.library.assets.IAsset;
 	import away3dGold.library.assets.NamedAssetBase;
 	import away3dGold.library.naming.ConflictPrecedence;
 	import away3dGold.library.naming.ConflictStrategy;
 	import away3dGold.library.naming.ConflictStrategyBase;
 	import away3dGold.library.utils.AssetLibraryIterator;
+	import away3dGold.library.utils.IDUtil;
 	import away3dGold.loaders.AssetLoader;
 	import away3dGold.loaders.misc.AssetLoaderContext;
 	import away3dGold.loaders.misc.AssetLoaderToken;
@@ -331,6 +333,9 @@ package away3dGold.library
 				_strategy.resolveConflict(asset, old, _assetDictionary[ns], _strategyPreference);
 			}
 			
+			//create unique-id (for now this is used in AwayBuilder only
+			asset.id=IDUtil.createUID();
+			
 			// Add it
 			_assets.push(asset);
 			if (!_assetDictionary.hasOwnProperty(ns))
@@ -477,6 +482,7 @@ package away3dGold.library
 		private function loadResource(req : URLRequest, context : AssetLoaderContext = null, ns : String = null, parser : ParserBase = null) : AssetLoaderToken
 		{
 			var loader : AssetLoader = new AssetLoader();
+            if (!_loadingSessions)_loadingSessions = new Vector.<AssetLoader>;
 			_loadingSessions.push(loader);
 			loader.addEventListener(LoaderEvent.RESOURCE_COMPLETE, onResourceRetrieved);
 			loader.addEventListener(LoaderEvent.DEPENDENCY_COMPLETE, onDependencyRetrieved);
@@ -497,10 +503,21 @@ package away3dGold.library
 			
 			// Error are handled separately (see documentation for addErrorHandler)
 			loader.addErrorHandler(onDependencyRetrievingError);
+			loader.addParseErrorHandler(onDependencyRetrievingParseError);
 			
 			return loader.load(req, context, ns, parser);
 		}
 		
+        public function stopAllLoadingSessions():void {
+            var i:int;
+            if (!_loadingSessions)_loadingSessions = new Vector.<AssetLoader>;
+            var length:int = _loadingSessions.length;
+            for (i = 0; i < length; i++) {
+                killLoadingSession(_loadingSessions[i]);
+            }
+			_loadingSessions = null;
+        }
+        
 		/**
 		 * Retrieves an unloaded resource parsed from the given data.
 		 * @param data The data to be parsed.
@@ -512,6 +529,7 @@ package away3dGold.library
 		private function parseResource(data : *, context : AssetLoaderContext = null, ns : String = null, parser : ParserBase = null) : AssetLoaderToken
 		{
 			var loader : AssetLoader = new AssetLoader();
+            if (!_loadingSessions)_loadingSessions = new Vector.<AssetLoader>;
 			_loadingSessions.push(loader);
 			loader.addEventListener(LoaderEvent.RESOURCE_COMPLETE, onResourceRetrieved);
 			loader.addEventListener(LoaderEvent.DEPENDENCY_COMPLETE, onDependencyRetrieved);
@@ -532,6 +550,7 @@ package away3dGold.library
 			
 			// Error are handled separately (see documentation for addErrorHandler)
 			loader.addErrorHandler(onDependencyRetrievingError);
+			loader.addParseErrorHandler(onDependencyRetrievingParseError);
 			
 			return loader.loadData(data, '', context, ns, parser);
 		}
@@ -576,6 +595,19 @@ package away3dGold.library
 				return false;
 			}
 		}
+		/**
+		 * Called when a an error occurs during parsing.
+		 */
+		private function onDependencyRetrievingParseError(event : ParserEvent) : Boolean
+		{
+			if (hasEventListener(ParserEvent.PARSE_ERROR)) {
+				dispatchEvent(event);
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
 		
 		private function onAssetComplete(event : AssetEvent) : void
 		{
@@ -597,8 +629,22 @@ package away3dGold.library
 		private function onResourceRetrieved(event : LoaderEvent) : void
 		{
 			var loader : AssetLoader = AssetLoader(event.target);
-			
+			killLoadingSession(loader);
 			var index : int = _loadingSessions.indexOf(loader);
+			_loadingSessions.splice(index, 1);
+			
+			/*
+			if(session.handle){
+				dispatchEvent(event);
+			}else{
+				onResourceError((session is IResource)? IResource(session) : null);
+			}
+			*/
+			
+			dispatchEvent(event.clone());
+		}
+        private function killLoadingSession(loader:AssetLoader):void {
+        
 			loader.removeEventListener(LoaderEvent.LOAD_ERROR, onDependencyRetrievingError);
 			loader.removeEventListener(LoaderEvent.RESOURCE_COMPLETE, onResourceRetrieved);
 			loader.removeEventListener(LoaderEvent.DEPENDENCY_COMPLETE, onDependencyRetrieved);
@@ -616,19 +662,9 @@ package away3dGold.library
 			loader.removeEventListener(AssetEvent.ENTITY_COMPLETE, onAssetComplete);
 			loader.removeEventListener(AssetEvent.SKELETON_COMPLETE, onAssetComplete);
 			loader.removeEventListener(AssetEvent.SKELETON_POSE_COMPLETE, onAssetComplete);
+			loader.stop();
 			
-			_loadingSessions.splice(index, 1);
-			
-			/*
-			if(session.handle){
-				dispatchEvent(event);
-			}else{
-				onResourceError((session is IResource)? IResource(session) : null);
-			}
-			*/
-			
-			dispatchEvent(event.clone());
-		}
+        }
 		
 		/**
 		 * Called when unespected error occurs

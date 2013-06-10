@@ -1,17 +1,15 @@
 package away3dGold.materials.methods
 {
-	import away3dGold.arcane;
-	import away3dGold.cameras.Camera3D;
-	import away3dGold.core.base.IRenderable;
-	import away3dGold.core.managers.Stage3DProxy;
-	import away3dGold.events.ShadingMethodEvent;
-	import away3dGold.lights.DirectionalLight;
-	import away3dGold.lights.shadowmaps.CascadeShadowMapper;
-	import away3dGold.materials.compilation.ShaderRegisterCache;
-	import away3dGold.materials.compilation.ShaderRegisterData;
-	import away3dGold.materials.compilation.ShaderRegisterElement;
-
-	import flash.events.Event;
+	import away3dGold.*;
+	import away3dGold.cameras.*;
+	import away3dGold.core.base.*;
+	import away3dGold.core.managers.*;
+	import away3dGold.events.*;
+	import away3dGold.lights.*;
+	import away3dGold.lights.shadowmaps.*;
+	import away3dGold.materials.compilation.*;
+	
+	import flash.events.*;
 
 	use namespace arcane;
 
@@ -184,7 +182,8 @@ package away3dGold.materials.methods
 
 			var vertexData : Vector.<Number> = vo.vertexData;
 			var vertexIndex : int = vo.vertexConstantsIndex;
-			vertexData[vertexIndex + 3] = -_epsilon;
+			
+			vo.vertexData[vo.vertexConstantsIndex + 3] = -1/(_cascadeShadowMapper.depth*_epsilon);
 
 			var numCascades : int = _cascadeShadowMapper.numCascades;
 			vertexIndex += 4;

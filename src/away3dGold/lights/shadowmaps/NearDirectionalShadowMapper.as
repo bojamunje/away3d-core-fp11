@@ -41,7 +41,7 @@ package away3dGold.lights.shadowmaps {
 			}
 
 			updateProjectionFromFrustumCorners(viewCamera, _localFrustum, _matrix);
-			_depthLens.matrix = _matrix;
+			_overallDepthLens.matrix = _matrix;
 		}
 	}
 }

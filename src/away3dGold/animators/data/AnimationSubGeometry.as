@@ -1,6 +1,7 @@
 package away3dGold.animators.data
 {
 	import away3dGold.core.managers.Stage3DProxy;
+	
 	import flash.display3D.Context3D;
 	import flash.display3D.VertexBuffer3D;
 	
@@ -47,12 +48,24 @@ package away3dGold.animators.data
 			if (!buffer || _bufferContext[contextIndex] != context) {
 				buffer = _vertexBuffer[contextIndex] = context.createVertexBuffer(_numVertices, _totalLenOfOneVertex);
 				_bufferContext[contextIndex] = context;
+				_bufferDirty[contextIndex] = true;
 			}
 			if (_bufferDirty[contextIndex]) {
 				buffer.uploadFromVector(_vertexData, 0, _numVertices);
 				_bufferDirty[contextIndex] = false;
 			}
 			context.setVertexBufferAt(index, buffer, bufferOffset, format);
+		}
+		
+		public function dispose():void
+		{
+			while(_vertexBuffer.length)
+			{
+				var vertexBuffer:VertexBuffer3D = _vertexBuffer.pop()
+				
+				if(vertexBuffer)
+					vertexBuffer.dispose();
+			}
 		}
 		
 		public function invalidateBuffer():void

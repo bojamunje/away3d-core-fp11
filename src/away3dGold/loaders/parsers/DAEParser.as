@@ -1,21 +1,37 @@
 package away3dGold.loaders.parsers {
-	import away3dGold.*;
-	import away3dGold.animators.*;
-	import away3dGold.animators.data.*;
-	import away3dGold.animators.nodes.*;
-	import away3dGold.containers.*;
-	import away3dGold.core.base.*;
-	import away3dGold.debug.*;
-	import away3dGold.entities.*;
-	import away3dGold.loaders.misc.*;
-	import away3dGold.materials.*;
-	import away3dGold.materials.methods.*;
-	import away3dGold.materials.utils.*;
-	import away3dGold.textures.*;
+	import flash.display.BitmapData;
+	import flash.geom.Matrix3D;
+	import flash.geom.Vector3D;
+	import flash.net.URLRequest;
 	
-	import flash.display.*;
-	import flash.geom.*;
-	import flash.net.*;
+	import away3dGold.arcane;
+	import away3dGold.animators.SkeletonAnimationSet;
+	import away3dGold.animators.data.JointPose;
+	import away3dGold.animators.data.Skeleton;
+	import away3dGold.animators.data.SkeletonJoint;
+	import away3dGold.animators.data.SkeletonPose;
+	import away3dGold.animators.nodes.AnimationNodeBase;
+	import away3dGold.animators.nodes.SkeletonClipNode;
+	import away3dGold.containers.ObjectContainer3D;
+	import away3dGold.core.base.CompactSubGeometry;
+	import away3dGold.core.base.Geometry;
+	import away3dGold.core.base.SkinnedSubGeometry;
+	import away3dGold.debug.Debug;
+	import away3dGold.entities.Mesh;
+	import away3dGold.loaders.misc.ResourceDependency;
+	import away3dGold.materials.ColorMaterial;
+	import away3dGold.materials.ColorMultiPassMaterial;
+	import away3dGold.materials.MaterialBase;
+	import away3dGold.materials.MultiPassMaterialBase;
+	import away3dGold.materials.SinglePassMaterialBase;
+	import away3dGold.materials.TextureMaterial;
+	import away3dGold.materials.TextureMultiPassMaterial;
+	import away3dGold.materials.methods.BasicAmbientMethod;
+	import away3dGold.materials.methods.BasicDiffuseMethod;
+	import away3dGold.materials.methods.BasicSpecularMethod;
+	import away3dGold.materials.utils.DefaultMaterialManager;
+	import away3dGold.textures.BitmapTexture;
+	import away3dGold.textures.Texture2DBase;
 
 	use namespace arcane;
 
@@ -54,8 +70,9 @@ package away3dGold.loaders.parsers {
 		private var _animationInfo : DAEAnimationInfo;
 		//private var _animators : Vector.<IAnimator>;
 		private var _rootNodes : Vector.<AnimationNodeBase>;
-		private var _defaultBitmapMaterial : TextureMaterial = DefaultMaterialManager.getDefaultMaterial();
+		private var _defaultBitmapMaterial : MaterialBase = DefaultMaterialManager.getDefaultMaterial();
 		private var _defaultColorMaterial : ColorMaterial = new ColorMaterial(0xff0000);
+		private var _defaultColorMaterialMulti : ColorMultiPassMaterial = new ColorMultiPassMaterial(0xff0000);
 		private static var _numInstances : uint = 0;
 
 		/**
@@ -212,13 +229,20 @@ package away3dGold.loaders.parsers {
 		}
 
 
-		private function buildDefaultMaterial(map : BitmapData = null) : TextureMaterial
+		private function buildDefaultMaterial(map : BitmapData = null) : MaterialBase
 		{
 			//TODO:fix this duplication mess
-			if (map)
-				_defaultBitmapMaterial = new TextureMaterial(new BitmapTexture(map));
+			if (map){
+				if(materialMode<2)
+					_defaultBitmapMaterial = new TextureMaterial(new BitmapTexture(map));
+				else
+					_defaultBitmapMaterial = new TextureMultiPassMaterial(new BitmapTexture(map));
+			}
 			else
-				_defaultBitmapMaterial = DefaultMaterialManager.getDefaultMaterial();
+				if(materialMode<2)
+					_defaultBitmapMaterial = DefaultMaterialManager.getDefaultMaterial();
+				else
+					_defaultBitmapMaterial = new TextureMultiPassMaterial(DefaultMaterialManager.getDefaultTexture());
 
 			return _defaultBitmapMaterial;
 		}
@@ -705,8 +729,13 @@ package away3dGold.loaders.parsers {
 		private function setupMaterial(material : DAEMaterial, effect : DAEEffect) : MaterialBase
 		{
 			if (!effect || !material) return null;
-
-			var mat : SinglePassMaterialBase = _defaultColorMaterial;
+			
+			var mat : MaterialBase
+			if(materialMode<2)
+				mat= _defaultColorMaterial;
+			else
+				mat = new ColorMultiPassMaterial(_defaultColorMaterial.color);
+			
 			var textureMaterial : TextureMaterial;
 			var ambient : DAEColorOrTexture = effect.shader.props["ambient"];
 			var diffuse : DAEColorOrTexture = effect.shader.props["diffuse"];
@@ -718,28 +747,45 @@ package away3dGold.loaders.parsers {
 				var image : DAEImage = _libImages[effect.surface.init_from];
 
 				if (image.resource !== null && isBitmapDataValid(image.resource.bitmapData)) {
-					mat = textureMaterial = buildDefaultMaterial(image.resource.bitmapData);
-					textureMaterial.alpha = transparency;
+					mat = buildDefaultMaterial(image.resource.bitmapData);
+					if(materialMode<2)
+						TextureMaterial(mat).alpha = transparency;
 				}
 				else {
-					mat = textureMaterial = buildDefaultMaterial();
-					textureMaterial.alpha = transparency;
+					mat = buildDefaultMaterial();
 				}
 
-			} else if (diffuse && diffuse.color) {
-				mat = new ColorMaterial(diffuse.color.rgb, transparency);
+			} 
+			
+			else if (diffuse && diffuse.color) {
+				if(materialMode<2)
+				    mat = new ColorMaterial(diffuse.color.rgb, transparency);
+                else
+				    mat = new ColorMultiPassMaterial(diffuse.color.rgb);
 			}
-
+            trace("mat = " + materialMode);
 			if (mat) {
-				mat.ambientMethod = new BasicAmbientMethod();
-				mat.diffuseMethod = new BasicDiffuseMethod();
-				mat.specularMethod = new BasicSpecularMethod();
-				mat.ambientColor = (ambient && ambient.color) ? ambient.color.rgb : 0x303030;
-				mat.specularColor = (specular && specular.color) ? specular.color.rgb : 0x202020;
-
-				mat.gloss = shininess;
-				mat.ambient = 1;
-				mat.specular = 1;
+				if(materialMode<2){
+					SinglePassMaterialBase(mat).ambientMethod = new BasicAmbientMethod();
+					SinglePassMaterialBase(mat).diffuseMethod = new BasicDiffuseMethod();
+					SinglePassMaterialBase(mat).specularMethod = new BasicSpecularMethod();
+					SinglePassMaterialBase(mat).ambientColor = (ambient && ambient.color) ? ambient.color.rgb : 0x303030;
+					SinglePassMaterialBase(mat).specularColor = (specular && specular.color) ? specular.color.rgb : 0x202020;	
+					SinglePassMaterialBase(mat).gloss = shininess;
+					SinglePassMaterialBase(mat).ambient = 1;
+					SinglePassMaterialBase(mat).specular = 1;
+				}
+				else{
+					MultiPassMaterialBase(mat).ambientMethod = new BasicAmbientMethod();
+					MultiPassMaterialBase(mat).diffuseMethod = new BasicDiffuseMethod();
+					MultiPassMaterialBase(mat).specularMethod = new BasicSpecularMethod();
+					MultiPassMaterialBase(mat).ambientColor = (ambient && ambient.color) ? ambient.color.rgb : 0x303030;
+					MultiPassMaterialBase(mat).specularColor = (specular && specular.color) ? specular.color.rgb : 0x202020;	
+					MultiPassMaterialBase(mat).gloss = shininess;
+					MultiPassMaterialBase(mat).ambient = 1;
+					MultiPassMaterialBase(mat).specular = 1;
+					
+				}
 			}
 
 			mat.name = material.id;
@@ -1218,11 +1264,22 @@ class DAEPrimitive extends DAEElement
 		var faces : Vector.<DAEFace> = new Vector.<DAEFace>();
 		var input : DAEInput;
 		var source : DAESource;
-		var numInputs : uint = _inputs.length;
+		//var numInputs : uint = _inputs.length;  //shared inputs offsets VERTEX and TEXCOORD
+		var numInputs:uint;
+		if (_inputs.length > 1) {
+			var offsets:Array = [];
+			for each (var daei:DAEInput in _inputs){
+				if (!offsets[daei.offset]){
+					offsets[daei.offset] = true;
+					numInputs++;
+				}
+			}
+		} else {
+			numInputs = _inputs.length;
+		}
+
 		var idx : uint = 0, index : uint;
 		var i : uint, j : uint;
-		//var x : Number, y : Number, z : Number;
-		//var vertexIndex : uint = 0;
 		var vertexDict : Object = {};
 		var idx32 : uint;
 		this.vertices = new Vector.<DAEVertex>();

@@ -1,4 +1,10 @@
 package away3dGold.loaders.parsers {
+	import flash.geom.Matrix3D;
+	import flash.geom.Vector3D;
+	import flash.net.URLRequest;
+	import flash.utils.ByteArray;
+	import flash.utils.Endian;
+	
 	import away3dGold.arcane;
 	import away3dGold.containers.ObjectContainer3D;
 	import away3dGold.core.base.Geometry;
@@ -9,18 +15,15 @@ package away3dGold.loaders.parsers {
 	import away3dGold.loaders.misc.ResourceDependency;
 	import away3dGold.loaders.parsers.utils.ParserUtil;
 	import away3dGold.materials.ColorMaterial;
+	import away3dGold.materials.ColorMultiPassMaterial;
 	import away3dGold.materials.MaterialBase;
+	import away3dGold.materials.MultiPassMaterialBase;
 	import away3dGold.materials.SinglePassMaterialBase;
 	import away3dGold.materials.TextureMaterial;
+	import away3dGold.materials.TextureMultiPassMaterial;
 	import away3dGold.materials.utils.DefaultMaterialManager;
 	import away3dGold.textures.Texture2DBase;
 	import away3dGold.tools.utils.GeomUtil;
-
-	import flash.geom.Matrix3D;
-	import flash.geom.Vector3D;
-	import flash.net.URLRequest;
-	import flash.utils.ByteArray;
-	import flash.utils.Endian;
 	
 	use namespace arcane;
 
@@ -367,7 +370,7 @@ package away3dGold.loaders.parsers {
 				_byteData.position += 2;
 			}
                         
-                        _cur_obj.smoothingGroups = new Vector.<uint>(count, true);
+            _cur_obj.smoothingGroups = new Vector.<uint>(count, true);
 		}
 		
 		private function parseSmoothingGroups():void {
@@ -690,17 +693,28 @@ package away3dGold.loaders.parsers {
 		
 		private function finalizeCurrentMaterial() : void
 		{
-			var mat : SinglePassMaterialBase;
-			
-			if (_cur_mat.colorMap) {
-				mat = new TextureMaterial(_cur_mat.colorMap.texture || DefaultMaterialManager.getDefaultTexture());
+			var mat : MaterialBase;
+			if (materialMode<2){			
+				if (_cur_mat.colorMap) {
+					mat = new TextureMaterial(_cur_mat.colorMap.texture || DefaultMaterialManager.getDefaultTexture());
+				}
+				else {
+					mat = new ColorMaterial(_cur_mat.diffuseColor);
+				}
+				SinglePassMaterialBase(mat).ambientColor = _cur_mat.ambientColor;
+				SinglePassMaterialBase(mat).specularColor = _cur_mat.specularColor;
 			}
-			else {
-				mat = new ColorMaterial(_cur_mat.diffuseColor);
+			else{			
+				if (_cur_mat.colorMap) {
+					mat = new TextureMultiPassMaterial(_cur_mat.colorMap.texture || DefaultMaterialManager.getDefaultTexture());
+				}
+				else {
+					mat = new ColorMultiPassMaterial(_cur_mat.diffuseColor);
+				}
+				MultiPassMaterialBase(mat).ambientColor = _cur_mat.ambientColor;
+				MultiPassMaterialBase(mat).specularColor = _cur_mat.specularColor;
 			}
 			
-			mat.ambientColor = _cur_mat.ambientColor;
-			mat.specularColor = _cur_mat.specularColor;
 			mat.bothSides = _cur_mat.twoSided;
 			
 			finalizeAsset(mat, _cur_mat.name);

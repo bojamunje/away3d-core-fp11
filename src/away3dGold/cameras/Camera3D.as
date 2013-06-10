@@ -1,15 +1,21 @@
 package away3dGold.cameras
 {
-	import away3dGold.*;
+	import flash.geom.Matrix3D;
+	import flash.geom.Vector3D;
+	
+	import away3dGold.arcane;
 	import away3dGold.bounds.BoundingVolumeBase;
 	import away3dGold.bounds.NullBounds;
-	import away3dGold.cameras.lenses.*;
-	import away3dGold.core.math.*;
-	import away3dGold.core.partition.*;
-	import away3dGold.entities.*;
-	import away3dGold.events.*;
-	
-	import flash.geom.*;
+	import away3dGold.cameras.lenses.LensBase;
+	import away3dGold.cameras.lenses.PerspectiveLens;
+	import away3dGold.core.math.Matrix3DUtils;
+	import away3dGold.core.math.Plane3D;
+	import away3dGold.core.partition.CameraNode;
+	import away3dGold.core.partition.EntityNode;
+	import away3dGold.entities.Entity;
+	import away3dGold.events.CameraEvent;
+	import away3dGold.events.LensEvent;
+	import away3dGold.library.assets.AssetType;
 
 	use namespace arcane;
 
@@ -51,7 +57,11 @@ package away3dGold.cameras
 		{
 			return new NullBounds();
 		}
-
+		
+		public override function get assetType() : String
+		{
+			return AssetType.CAMERA;
+		}
 		private function onLensMatrixChanged(event : LensEvent) : void
 		{
 			_viewProjectionDirty = true;

@@ -9,6 +9,7 @@ package away3dGold.events
 		public static const ASSET_COMPLETE : String = "assetComplete";
 		public static const ENTITY_COMPLETE : String = "entityComplete";
 		public static const SKYBOX_COMPLETE : String = "skyboxComplete";
+		public static const CAMERA_COMPLETE : String = "cameraComplete";
 		public static const MESH_COMPLETE : String = "meshComplete";
 		public static const GEOMETRY_COMPLETE : String = "geometryComplete";
 		public static const SKELETON_COMPLETE : String = "skeletonComplete";
@@ -17,6 +18,7 @@ package away3dGold.events
 		public static const TEXTURE_COMPLETE : String = "textureComplete";
 		public static const TEXTURE_PROJECTOR_COMPLETE : String = "textureProjectorComplete";
 		public static const MATERIAL_COMPLETE : String = "materialComplete";
+		public static const ANIMATOR_COMPLETE : String = "animatorComplete";
 		public static const ANIMATION_SET_COMPLETE : String = "animationSetComplete";
 		public static const ANIMATION_STATE_COMPLETE : String = "animationStateComplete";
 		public static const ANIMATION_NODE_COMPLETE : String = "animationNodeComplete";

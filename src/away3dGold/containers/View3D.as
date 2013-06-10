@@ -1,8 +1,8 @@
-﻿package away3dGold.containers
+﻿﻿package away3dGold.containers
 {
-import away3dGold.core.managers.Touch3DManager;
 
-import away3dGold.events.Scene3DEvent;
+	import away3dGold.core.managers.Touch3DManager;
+	import away3dGold.events.Scene3DEvent;
 
 	import flash.display.Sprite;
 	import flash.display3D.Context3D;
@@ -129,7 +129,7 @@ import away3dGold.events.Scene3DEvent;
 		
 		private function initRightClickMenu():void
 		{
-			_menu0 = new ContextMenuItem("Away3D.com\tv" + Away3D.MAJOR_VERSION +"." + Away3D.MINOR_VERSION +"."+ Away3D.REVISION, true, true, true);
+			_menu0 = new ContextMenuItem("away3dGold.com\tv" + Away3D.MAJOR_VERSION +"." + Away3D.MINOR_VERSION +"."+ Away3D.REVISION, true, true, true);
 			_menu1 = new ContextMenuItem("View Source", true, true, true); 
 			_menu0.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, visitWebsite);
 			_menu1.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, viewSource);

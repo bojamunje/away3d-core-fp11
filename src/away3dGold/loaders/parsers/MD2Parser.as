@@ -1,18 +1,23 @@
 package away3dGold.loaders.parsers
 {
-	import flash.net.*;
-	import flash.utils.*;
+	import flash.net.URLRequest;
+	import flash.utils.ByteArray;
+	import flash.utils.Dictionary;
+	import flash.utils.Endian;
 	
-	import away3dGold.*;
-	import away3dGold.animators.*;
-	import away3dGold.animators.nodes.*;
-	import away3dGold.core.base.*;
-	import away3dGold.entities.*;
-	import away3dGold.loaders.misc.*;
-	import away3dGold.loaders.parsers.utils.*;
-	import away3dGold.materials.*;
-	import away3dGold.materials.utils.*;
-	import away3dGold.textures.*;
+	import away3dGold.arcane;
+	import away3dGold.animators.VertexAnimationSet;
+	import away3dGold.animators.nodes.VertexClipNode;
+	import away3dGold.core.base.CompactSubGeometry;
+	import away3dGold.core.base.Geometry;
+	import away3dGold.entities.Mesh;
+	import away3dGold.loaders.misc.ResourceDependency;
+	import away3dGold.loaders.parsers.utils.ParserUtil;
+	import away3dGold.materials.MaterialBase;
+	import away3dGold.materials.TextureMaterial;
+	import away3dGold.materials.TextureMultiPassMaterial;
+	import away3dGold.materials.utils.DefaultMaterialManager;
+	import away3dGold.textures.Texture2DBase;
 
 	use namespace arcane;
 	
@@ -65,6 +70,8 @@ package away3dGold.loaders.parsers
 		private var _mesh : Mesh;
 		private var _geometry : Geometry;
 		
+		private var materialFinal:Boolean=false;
+		private var geoCreated:Boolean=false;
 		/**
 		 * Creates a new MD2Parser object.
 		 * @param uri The url or id of the data or file to be parsed.
@@ -107,10 +114,20 @@ package away3dGold.loaders.parsers
 				return;
 			
 			var asset : Texture2DBase = resourceDependency.assets[0] as Texture2DBase;
-			
-			if (asset)
-				TextureMaterial(_mesh.material).texture = asset;
-			
+			if (asset){
+				var material:MaterialBase;
+                if(materialMode<2)
+					material=new TextureMaterial(asset);
+                else
+					material=new TextureMultiPassMaterial(asset);
+				
+				material.name=_mesh.material.name;
+				_mesh.material=material;
+				finalizeAsset(material);
+				finalizeAsset(_mesh.geometry);
+				finalizeAsset(_mesh);
+			}
+			materialFinal=true;
 		}
 		/**
 		 * @inheritDoc
@@ -118,9 +135,16 @@ package away3dGold.loaders.parsers
 		override arcane function resolveDependencyFailure(resourceDependency:ResourceDependency):void
 		{
 			// apply system default
-			_mesh.material = DefaultMaterialManager.getDefaultMaterial();
+            if (materialMode<2)
+			    _mesh.material = DefaultMaterialManager.getDefaultMaterial();
+            else 
+			    _mesh.material = new TextureMultiPassMaterial(DefaultMaterialManager.getDefaultTexture());
+			
+			finalizeAsset(_mesh.geometry);
+			finalizeAsset(_mesh);
+			materialFinal=true;
+                
 		} 
-		
 		
 		/**
 		 * @inheritDoc
@@ -144,8 +168,11 @@ package away3dGold.loaders.parsers
 					// for this file format) and return it using finalizeAsset()
 					_geometry = new Geometry();
 					_mesh = new Mesh(_geometry, null);
-					_mesh.material = DefaultMaterialManager.getDefaultMaterial();
-					
+                    if (materialMode<2)
+					    _mesh.material = DefaultMaterialManager.getDefaultMaterial();
+                    else 
+					    _mesh.material = new TextureMultiPassMaterial(DefaultMaterialManager.getDefaultTexture());
+                        
 					//_geometry.animation = new VertexAnimation(2, VertexAnimationMode.ABSOLUTE);
 					//_animator = new VertexAnimator(VertexAnimationState(_mesh.animationState));
 					
@@ -165,14 +192,20 @@ package away3dGold.loaders.parsers
 				else if (!_parsedFrames) {
 					parseFrames();
 				}
-
-				else {
+				else if((geoCreated)&&(materialFinal))
+					return PARSING_DONE;
+					
+				else if (!geoCreated) {
+					geoCreated=true;
 					createDefaultSubGeometry();
 					// Force name to be chosen by finalizeAsset()
 					_mesh.name = "";
-					finalizeAsset(_mesh);
-
-					return PARSING_DONE;
+					if(materialFinal){
+						finalizeAsset(_mesh.geometry);
+						finalizeAsset(_mesh);
+					}
+					
+					pauseAndRetrieveDependencies();
 				}
 			}
 			
@@ -238,11 +271,16 @@ package away3dGold.loaders.parsers
 
 				_materialNames[i] = name;
 				// only support 1 skin TODO: really?
-				if (dependencies.length == 0)
+				if (dependencies.length == 0){
 					addDependency(name, new URLRequest(url));
+				}
 			}
 			
-			//_mesh.material.name = _materialNames[0];
+            if (_materialNames.length>0)
+			    _mesh.material.name = _materialNames[0];
+            else
+                materialFinal=true;
+            
 		}
 		
 		/**

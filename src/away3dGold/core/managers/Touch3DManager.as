@@ -1,8 +1,7 @@
 package away3dGold.core.managers
 {
 
-
-import away3dGold.arcane;
+	import away3dGold.arcane;
 	import away3dGold.containers.ObjectContainer3D;
 	import away3dGold.containers.View3D;
 	import away3dGold.core.pick.IPicker;
