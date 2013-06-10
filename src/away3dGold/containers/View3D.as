@@ -1,4 +1,4 @@
-﻿﻿package away3dGold.containers
+﻿package away3dGold.containers
 {
 
 	import away3dGold.core.managers.Touch3DManager;
